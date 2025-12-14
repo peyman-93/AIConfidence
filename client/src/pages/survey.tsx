@@ -181,7 +181,6 @@ export default function SurveyPage() {
 
       toast.success("Survey submitted successfully!");
       completeSurvey();
-      setLocation("/dashboard");
     } catch (error: any) {
       toast.error(error.message || "Failed to submit survey. Please try again.");
     } finally {
