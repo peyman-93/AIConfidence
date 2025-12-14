@@ -32,8 +32,8 @@ BEGIN
         ALTER TABLE public.surveys ADD COLUMN industry text;
     END IF;
     
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='surveys' AND column_name='current_role') THEN
-        ALTER TABLE public.surveys ADD COLUMN current_role text;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='surveys' AND column_name='job_role') THEN
+        ALTER TABLE public.surveys ADD COLUMN job_role text;
     END IF;
     
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='surveys' AND column_name='years_experience') THEN
@@ -57,7 +57,7 @@ COMMENT ON COLUMN public.surveys.country IS 'User country/location';
 COMMENT ON COLUMN public.surveys.linkedin_profile IS 'User LinkedIn profile URL (optional)';
 COMMENT ON COLUMN public.surveys.best_describes_you IS 'What best describes the user';
 COMMENT ON COLUMN public.surveys.industry IS 'Industry the user works in';
-COMMENT ON COLUMN public.surveys.current_role IS 'User current job role';
+COMMENT ON COLUMN public.surveys.job_role IS 'User current job role';
 COMMENT ON COLUMN public.surveys.years_experience IS 'Years of professional experience';
 COMMENT ON COLUMN public.surveys.how_did_you_hear IS 'How user heard about the service';
 COMMENT ON COLUMN public.surveys.referral_name IS 'Name of person who referred (if applicable)';
