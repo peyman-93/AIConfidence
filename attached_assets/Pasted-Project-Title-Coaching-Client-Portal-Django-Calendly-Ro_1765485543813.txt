@@ -1,0 +1,67 @@
+Project Title: Coaching Client Portal (Django + Calendly)
+
+Role: Act as a Senior Python/Django Developer.
+
+Objective: Build a secure client portal where users register, complete a survey, and access a dashboard. The dashboard will use Calendly for bookings/payments and Django Admin for backend management.
+
+Tech Stack:
+
+Backend: Python (Django Framework).
+
+Frontend: Django Templates (Standard HTML5 + Tailwind CSS).
+
+Database: SQLite (Default for Django).
+
+Authentication: Django's built-in Auth system.
+
+Core Features & Logic:
+
+User Authentication:
+
+Standard Registration (Email, Password, Name) and Login pages.
+
+Add a field to the User Model: promoter_code (Text, optional) to track who referred them.
+
+The "Gatekeeper" (Survey):
+
+Create a Survey model (Questions: Goals, Challenges, etc.).
+
+Logic: When a user logs in, check if they have completed the Survey.
+
+If No: Redirect them to the Survey Form. They cannot leave this page until submitted.
+
+If Yes: Allow them to see the Dashboard.
+
+The Dashboard (User View):
+
+A clean HTML page using Tailwind CSS.
+
+Top Section: "Welcome, [User Name]".
+
+Middle Section (Booking):
+
+Embed my Calendly Booking Widget here (Create a placeholder div where I can paste the code later).
+
+Context: I will use Calendly to handle the payments (€100) and the "Round Robin" coach assignment.
+
+Bottom Section (My Files):
+
+Display a list of files linked to this user.
+
+Columns: Date, File Name, Download Button.
+
+The Admin Panel (For Me):
+
+Enable the standard Django Admin (/admin).
+
+File Uploads: Create a ClientFile model (Fields: User, File, Description, UploadDate).
+
+Requirement: I must be able to log into the Admin Panel, select a specific User, and upload a PDF/Image for them. The user then sees this on their Dashboard.
+
+Integration (Webhook):
+
+Create a generic URL endpoint: /api/calendly-webhook/.
+
+For now, just make it print the received JSON data to the console (print logs) so we can debug it later.
+
+Instructions for Replit: Please set up the full Django project structure. Write the models.py first, then the views.py and urls.py. Finally, provide the HTML templates for the Login, Survey, and Dashboard.
