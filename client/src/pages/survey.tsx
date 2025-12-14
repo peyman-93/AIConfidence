@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { useAuth } from "@/lib/mock-data";
 import { surveyAPI } from "@/lib/api";
@@ -11,15 +11,65 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
 import { useLocation } from "wouter";
-import { CheckCircle2, ArrowRight } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 
 interface SurveyFormData {
-  goals: string;
-  goalsDetails: string;
-  challenges: string;
-  commitmentLevel: string;
+  // Section 1: Personal Information
+  full_name: string;
+  email: string;
+  age_range: string;
+  country: string;
+  linkedin_profile: string;
+  
+  // Section 2: Background
+  best_describes_you: string;
+  industry: string;
+  job_role: string;
+  years_experience: string;
+  how_did_you_hear: string;
+  referral_name: string; // Only shown if "Referral" is selected
 }
+
+const AGE_RANGES = [
+  "18-24",
+  "25-34",
+  "35-44",
+  "45-54",
+  "55-64",
+  "65+"
+];
+
+const BEST_DESCRIBES_OPTIONS = [
+  "Entrepreneur",
+  "Executive/Leader",
+  "Professional/Manager",
+  "Student",
+  "Other"
+];
+
+const INDUSTRIES = [
+  "Technology",
+  "Finance",
+  "Healthcare",
+  "Education",
+  "Consulting",
+  "Real Estate",
+  "Retail",
+  "Manufacturing",
+  "Non-profit",
+  "Other"
+];
+
+const HOW_DID_YOU_HEAR_OPTIONS = [
+  "Social Media",
+  "Google Search",
+  "Referral",
+  "Podcast",
+  "YouTube",
+  "LinkedIn",
+  "Other"
+];
 
 export default function SurveyPage() {
   const { user, loading, completeSurvey } = useAuth();
@@ -29,12 +79,26 @@ export default function SurveyPage() {
 
   const form = useForm<SurveyFormData>({
     defaultValues: {
-      goals: "",
-      goalsDetails: "",
-      challenges: "",
-      commitmentLevel: "10",
+      full_name: "",
+      email: user?.email || "",
+      age_range: "",
+      country: "",
+      linkedin_profile: "",
+      best_describes_you: "",
+      industry: "",
+      job_role: "",
+      years_experience: "",
+      how_did_you_hear: "",
+      referral_name: "",
     },
   });
+
+  // Update email when user loads
+  useEffect(() => {
+    if (user?.email) {
+      form.setValue("email", user.email);
+    }
+  }, [user?.email, form]);
 
   // Wait for auth to finish loading before checking user
   if (loading) {
@@ -52,22 +116,24 @@ export default function SurveyPage() {
     return null;
   }
 
-  const totalSteps = 3;
+  const totalSteps = 2;
   const progress = (step / totalSteps) * 100;
+  const howDidYouHear = form.watch("how_did_you_hear");
 
   const handleNext = async () => {
     if (step < totalSteps) {
       // Validate current step
       if (step === 1) {
-        const goals = form.getValues("goals");
-        if (!goals) {
-          toast.error("Please select a main objective");
-          return;
-        }
-      } else if (step === 2) {
-        const challenges = form.getValues("challenges");
-        if (!challenges || challenges.trim().length === 0) {
-          toast.error("Please describe your biggest challenge");
+        const errors: string[] = [];
+        const data = form.getValues();
+        
+        if (!data.full_name?.trim()) errors.push("Full Name is required");
+        if (!data.email?.trim()) errors.push("Email Address is required");
+        if (!data.age_range) errors.push("Age Range is required");
+        if (!data.country?.trim()) errors.push("Country / Location is required");
+        
+        if (errors.length > 0) {
+          toast.error(errors[0]);
           return;
         }
       }
@@ -79,20 +145,43 @@ export default function SurveyPage() {
   };
 
   const handleSubmit = async () => {
+    // Validate step 2
+    const errors: string[] = [];
+    const data = form.getValues();
+    
+    if (!data.best_describes_you) errors.push("Please select what best describes you");
+    if (!data.industry) errors.push("Please select your industry");
+    if (!data.job_role?.trim()) errors.push("Current role is required");
+    if (!data.years_experience) errors.push("Years of professional experience is required");
+    if (!data.how_did_you_hear) errors.push("Please select how you heard about us");
+    if (data.how_did_you_hear === "Referral" && !data.referral_name?.trim()) {
+      errors.push("Please provide the name of the person who referred you");
+    }
+    
+    if (errors.length > 0) {
+      toast.error(errors[0]);
+      return;
+    }
+
     setIsSubmitting(true);
     try {
-      const data = form.getValues();
-      const goalsText = `${data.goals}${data.goalsDetails ? `: ${data.goalsDetails}` : ""}`;
-      
       await surveyAPI.submit({
-        goals: goalsText,
-        challenges: data.challenges,
-        experience_level: data.commitmentLevel,
-        additional_notes: `Commitment Level: ${data.commitmentLevel}/10`,
+        full_name: data.full_name,
+        email: data.email,
+        age_range: data.age_range,
+        country: data.country,
+        linkedin_profile: data.linkedin_profile || null,
+        best_describes_you: data.best_describes_you,
+        industry: data.industry,
+        job_role: data.job_role,
+        years_experience: data.years_experience,
+        how_did_you_hear: data.how_did_you_hear,
+        referral_name: data.how_did_you_hear === "Referral" ? data.referral_name : null,
       });
 
       toast.success("Survey submitted successfully!");
       completeSurvey();
+      setLocation("/dashboard");
     } catch (error: any) {
       toast.error(error.message || "Failed to submit survey. Please try again.");
     } finally {
@@ -112,7 +201,7 @@ export default function SurveyPage() {
         <div className="space-y-2">
           <div className="flex justify-between text-xs font-medium uppercase tracking-wider text-muted-foreground">
             <span>Progress</span>
-            <span>Step {step} of {totalSteps}</span>
+            <span>Section {step} of {totalSteps}</span>
           </div>
           <Progress value={progress} className="h-2" />
         </div>
@@ -120,14 +209,12 @@ export default function SurveyPage() {
         <Card className="border-t-4 border-t-primary shadow-lg">
           <CardHeader>
             <CardTitle className="text-xl">
-              {step === 1 && "Your Primary Goals"}
-              {step === 2 && "Current Challenges"}
-              {step === 3 && "Commitment Level"}
+              {step === 1 && "Personal Information"}
+              {step === 2 && "Background"}
             </CardTitle>
             <CardDescription>
-              {step === 1 && "What do you hope to achieve in the next 3 months?"}
-              {step === 2 && "What is the biggest obstacle standing in your way?"}
-              {step === 3 && "Are you ready to make a change?"}
+              {step === 1 && "Tell us about yourself"}
+              {step === 2 && "Help us understand your professional background"}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -135,32 +222,73 @@ export default function SurveyPage() {
             {step === 1 && (
               <div className="space-y-4 animate-in slide-in-from-right-4 duration-300">
                 <div className="space-y-2">
-                  <Label>Main Objective</Label>
+                  <Label htmlFor="full_name">
+                    Full Name <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    id="full_name"
+                    placeholder="John Doe"
+                    {...form.register("full_name", { required: true })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="email">
+                    Email Address <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="john@example.com"
+                    {...form.register("email", { required: true })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>
+                    Age Range <span className="text-destructive">*</span>
+                  </Label>
                   <Controller
-                    name="goals"
+                    name="age_range"
                     control={form.control}
+                    rules={{ required: true }}
                     render={({ field }) => (
                       <Select value={field.value} onValueChange={field.onChange}>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select a goal..." />
+                          <SelectValue placeholder="Select age range..." />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="career">Career Advancement</SelectItem>
-                          <SelectItem value="health">Health & Wellness</SelectItem>
-                          <SelectItem value="business">Business Growth</SelectItem>
-                          <SelectItem value="relationships">Relationships</SelectItem>
-                          <SelectItem value="other">Other</SelectItem>
+                          {AGE_RANGES.map((range) => (
+                            <SelectItem key={range} value={range}>
+                              {range}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     )}
                   />
                 </div>
+
                 <div className="space-y-2">
-                  <Label>Specific Details</Label>
-                  <Textarea 
-                    placeholder="Describe your goal in more detail..." 
-                    className="min-h-[100px]"
-                    {...form.register("goalsDetails")}
+                  <Label htmlFor="country">
+                    Country / Location <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    id="country"
+                    placeholder="United States"
+                    {...form.register("country", { required: true })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="linkedin_profile">
+                    LinkedIn Profile
+                  </Label>
+                  <Input
+                    id="linkedin_profile"
+                    type="url"
+                    placeholder="https://linkedin.com/in/yourprofile"
+                    {...form.register("linkedin_profile")}
                   />
                 </div>
               </div>
@@ -169,45 +297,126 @@ export default function SurveyPage() {
             {step === 2 && (
               <div className="space-y-4 animate-in slide-in-from-right-4 duration-300">
                 <div className="space-y-2">
-                  <Label>Describe your biggest challenge</Label>
-                  <Textarea 
-                    placeholder="What's holding you back?" 
-                    className="min-h-[150px]"
-                    {...form.register("challenges", { required: true })}
+                  <Label>
+                    What best describes you? <span className="text-destructive">*</span>
+                  </Label>
+                  <Controller
+                    name="best_describes_you"
+                    control={form.control}
+                    rules={{ required: true }}
+                    render={({ field }) => (
+                      <RadioGroup value={field.value} onValueChange={field.onChange} className="space-y-2">
+                        {BEST_DESCRIBES_OPTIONS.map((option, index) => (
+                          <div key={option} className="flex items-center space-x-2">
+                            <RadioGroupItem value={option} id={`desc-${index}`} />
+                            <Label htmlFor={`desc-${index}`} className="font-normal cursor-pointer">
+                              {index + 1}. {option}
+                            </Label>
+                          </div>
+                        ))}
+                      </RadioGroup>
+                    )}
                   />
                 </div>
-              </div>
-            )}
 
-            {step === 3 && (
-              <div className="space-y-4 animate-in slide-in-from-right-4 duration-300">
-                <Label>How committed are you on a scale of 1-10?</Label>
-                <Controller
-                  name="commitmentLevel"
-                  control={form.control}
-                  render={({ field }) => (
-                    <RadioGroup 
-                      value={field.value} 
-                      onValueChange={field.onChange}
-                      className="grid grid-cols-5 gap-4"
-                    >
-                      {[2, 4, 6, 8, 10].map((val) => (
-                        <div key={val} className="flex flex-col items-center space-y-2">
-                          <RadioGroupItem value={val.toString()} id={`r-${val}`} className="peer sr-only" />
-                          <Label
-                            htmlFor={`r-${val}`}
-                            className="flex flex-col items-center justify-center rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary peer-data-[state=checked]:text-primary cursor-pointer w-full text-center transition-all"
-                          >
-                            <span className="text-xl font-bold">{val}</span>
-                          </Label>
-                        </div>
-                      ))}
-                    </RadioGroup>
+                <div className="space-y-2">
+                  <Label>
+                    What industry do you work in? <span className="text-destructive">*</span>
+                  </Label>
+                  <Controller
+                    name="industry"
+                    control={form.control}
+                    rules={{ required: true }}
+                    render={({ field }) => (
+                      <RadioGroup value={field.value} onValueChange={field.onChange} className="space-y-2">
+                        {INDUSTRIES.map((industry, index) => (
+                          <div key={industry} className="flex items-center space-x-2">
+                            <RadioGroupItem value={industry} id={`industry-${index}`} />
+                            <Label htmlFor={`industry-${index}`} className="font-normal cursor-pointer">
+                              {index + 1}. {industry}
+                            </Label>
+                          </div>
+                        ))}
+                      </RadioGroup>
+                    )}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="job_role">
+                    What is your current role? <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    id="job_role"
+                    placeholder="e.g., Software Engineer, Marketing Manager"
+                    {...form.register("job_role", { required: true })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>
+                    Years of professional experience? <span className="text-destructive">*</span>
+                  </Label>
+                  <Controller
+                    name="years_experience"
+                    control={form.control}
+                    rules={{ required: true }}
+                    render={({ field }) => (
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select years of experience..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="0-1">0-1 years</SelectItem>
+                          <SelectItem value="2-5">2-5 years</SelectItem>
+                          <SelectItem value="6-10">6-10 years</SelectItem>
+                          <SelectItem value="11-15">11-15 years</SelectItem>
+                          <SelectItem value="16-20">16-20 years</SelectItem>
+                          <SelectItem value="20+">20+ years</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>
+                    How did you hear about us? <span className="text-destructive">*</span>
+                  </Label>
+                  <Controller
+                    name="how_did_you_hear"
+                    control={form.control}
+                    rules={{ required: true }}
+                    render={({ field }) => (
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select an option..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {HOW_DID_YOU_HEAR_OPTIONS.map((option) => (
+                            <SelectItem key={option} value={option}>
+                              {option}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                  {howDidYouHear === "Referral" && (
+                    <div className="mt-2 space-y-2 animate-in slide-in-from-top-2 duration-200">
+                      <Label htmlFor="referral_name">
+                        Other: <span className="text-destructive">*</span>
+                      </Label>
+                      <Input
+                        id="referral_name"
+                        placeholder="Name of person who referred you"
+                        {...form.register("referral_name", { 
+                          required: howDidYouHear === "Referral" 
+                        })}
+                      />
+                    </div>
                   )}
-                />
-                <p className="text-sm text-muted-foreground text-center pt-4">
-                  "I am ready to do whatever it takes."
-                </p>
+                </div>
               </div>
             )}
 

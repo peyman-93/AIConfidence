@@ -157,6 +157,19 @@ export const authAPI = {
 // Survey API
 export const surveyAPI = {
   async submit(data: {
+    full_name?: string;
+    email?: string;
+    age_range?: string;
+    country?: string;
+    linkedin_profile?: string | null;
+    best_describes_you?: string;
+    industry?: string;
+    job_role?: string;
+    current_role?: string; // Legacy field name for backward compatibility
+    years_experience?: string;
+    how_did_you_hear?: string;
+    referral_name?: string | null;
+    // Legacy fields for backward compatibility
     goals?: string;
     challenges?: string;
     experience_level?: string;
